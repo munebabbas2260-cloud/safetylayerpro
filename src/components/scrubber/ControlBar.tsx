@@ -1,0 +1,230 @@
+'use client';
+
+/**
+ * ControlBar Component
+ *
+ * Main control bar with scrub, restore, copy, clear, and settings actions
+ */
+
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
+import { Shield, RefreshCw, Copy, Trash2, Settings, Check } from 'lucide-react';
+import { useScrubberStore } from '@/store/useSecretStore';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { DEFAULT_OPTIONS } from '@/lib/scrubber';
+
+export function ControlBar() {
+  const { scrubText, restoreText, clearAll, sanitizedOutput, options, setOptions, rawInput, secrets } =
+    useScrubberStore();
+  const { toast } = useToast();
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  // Check if restore is available
+  const hasSecrets = secrets && secrets.length > 0;
+  const rawInputHasTokens = rawInput && /\[(EMAIL|CC|PHONE|ID)_\d+\]/.test(rawInput);
+  const canRestore = hasSecrets && (sanitizedOutput || rawInputHasTokens);
+
+  const handleScrub = () => {
+    if (!rawInput.trim()) {
+      toast({
+        title: 'No input to scrub',
+        description: 'Please enter some text in the Raw Input panel.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsScrubbing(true);
+    // Simulate processing for better UX
+    setTimeout(() => {
+      scrubText();
+      setIsScrubbing(false);
+      toast({
+        title: 'Text scrubbed successfully',
+        description: 'PII has been masked and replaced with tokens.',
+      });
+    }, 300);
+  };
+
+  const handleRestore = () => {
+    if (!hasSecrets) {
+      toast({
+        title: 'No secrets to restore',
+        description: 'Please scrub some text first, or the secrets may have been cleared.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!sanitizedOutput && !rawInputHasTokens) {
+      toast({
+        title: 'No text to restore',
+        description: 'Please scrub some text first, or paste text containing tokens into the Input panel.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsRestoring(true);
+    setTimeout(() => {
+      restoreText();
+      setIsRestoring(false);
+      
+      const message = rawInputHasTokens 
+        ? 'Tokens in Raw Input have been replaced with original values.'
+        : 'Original PII values from Safe Output have been restored.';
+      
+      toast({
+        title: 'Text restored successfully',
+        description: message,
+      });
+    }, 300);
+  };
+
+  const handleCopy = async () => {
+    if (!sanitizedOutput) {
+      toast({
+        title: 'Nothing to copy',
+        description: 'Please scrub some text first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(sanitizedOutput);
+      toast({
+        title: 'Copied to clipboard',
+        description: 'Sanitized text has been copied to your clipboard.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Copy failed',
+        description: 'Failed to copy text to clipboard.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleClear = () => {
+    clearAll();
+    toast({
+      title: 'Cleared all data',
+      description: 'All text and secret maps have been cleared.',
+    });
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 p-4 bg-gradient-to-r from-card to-card/50 rounded-lg border border-border/50 backdrop-blur-sm">
+      {/* Primary Actions */}
+      <Button
+        onClick={handleScrub}
+        disabled={isScrubbing || !rawInput.trim()}
+        className="gap-2 min-w-[140px] bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg shadow-green-500/20 transition-all hover:scale-105"
+      >
+        {isScrubbing ? (
+          <>
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Scrubbing...
+          </>
+        ) : (
+          <>
+            <Shield className="h-4 w-4" />
+            Scrub PII
+          </>
+        )}
+      </Button>
+
+      <Button
+        onClick={handleRestore}
+        disabled={isRestoring || !canRestore}
+        variant="outline"
+        className="gap-2 min-w-[140px] hover:bg-blue-500/10 hover:border-blue-500 transition-all hover:scale-105"
+      >
+        {isRestoring ? (
+          <>
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Restoring...
+          </>
+        ) : (
+          <>
+            <RefreshCw className="h-4 w-4" />
+            Restore
+          </>
+        )}
+      </Button>
+
+      {/* Secondary Actions */}
+      <Button 
+        onClick={handleCopy} 
+        disabled={!sanitizedOutput} 
+        variant="outline" 
+        className="gap-2 hover:bg-purple-500/10 hover:border-purple-500 transition-all hover:scale-105"
+      >
+        <Copy className="h-4 w-4" />
+        Copy
+      </Button>
+
+      <Button 
+        onClick={handleClear} 
+        variant="outline" 
+        className="gap-2 hover:bg-red-500/10 hover:border-red-500 transition-all hover:scale-105"
+      >
+        <Trash2 className="h-4 w-4" />
+        Clear
+      </Button>
+
+      {/* Settings Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Pattern Settings</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuCheckboxItem
+            checked={options.email}
+            onCheckedChange={(checked) => setOptions({ email: checked as boolean })}
+          >
+            Emails
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            checked={options.creditCard}
+            onCheckedChange={(checked) => setOptions({ creditCard: checked as boolean })}
+          >
+            Credit Cards
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            checked={options.phone}
+            onCheckedChange={(checked) => setOptions({ phone: checked as boolean })}
+          >
+            Phone Numbers
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            checked={options.ssn}
+            onCheckedChange={(checked) => setOptions({ ssn: checked as boolean })}
+          >
+            SSN / IDs
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setOptions(DEFAULT_OPTIONS)} className="justify-between">
+            Reset to Defaults
+            <Check className="h-4 w-4 ml-2" />
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
