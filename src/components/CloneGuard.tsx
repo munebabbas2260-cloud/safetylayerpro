@@ -9,21 +9,19 @@
 
 import { useEffect } from 'react';
 
-const AUTHORIZED_DOMAINS = [
-  'localhost',
-  '127.0.0.1',
-  'safetylayer.vercel.app',
-  'safetylayer.com',
-];
-
 export function CloneGuard() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const currentHostname = window.location.hostname;
-    const isAuthorized = AUTHORIZED_DOMAINS.some(domain => 
-      currentHostname === domain || currentHostname.endsWith(`.${domain}`)
-    );
+    
+    // Allow localhost, any Vercel domain (including previews), and safetylayer.com
+    const isAuthorized = 
+      currentHostname === 'localhost' ||
+      currentHostname === '127.0.0.1' ||
+      currentHostname.endsWith('.vercel.app') ||
+      currentHostname === 'safetylayer.com' ||
+      currentHostname.endsWith('.safetylayer.com');
 
     if (!isAuthorized) {
       // Clear, prominent warning in console
