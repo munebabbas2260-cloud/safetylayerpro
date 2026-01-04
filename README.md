@@ -13,7 +13,7 @@
   [![Next.js](https://img.shields.io/badge/Next.js-16.1-black?logo=next.js)](https://nextjs.org/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript)](https://www.typescriptlang.org/)
   
-  [Live Demo](https://safetylayer.com) · [Documentation](#-features) · [Report Bug](https://github.com/Imran-Ashiq/issues)
+  [Live Demo](https://safetylayer.com) · [Documentation](#-features) · 
   
 </div>
 
